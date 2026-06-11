@@ -1,0 +1,18 @@
+COMPANY PROFILE: INFY.NS
+
+longName: Infosys Limited
+sector: Technology
+industry: Information Technology Services
+marketCap: 4529984110592
+trailingPE: 14.735941
+forwardPE: 13.629546
+revenueGrowth: 0.066
+grossMargins: 0.29517
+operatingMargins: 0.20928
+returnOnEquity: 0.31439
+debtToEquity: 9.827
+currentRatio: 1.978
+beta: 0.109
+52WeekChange: -0.2880144
+recommendationKey: buy
+targetMeanPrice: 1460.95

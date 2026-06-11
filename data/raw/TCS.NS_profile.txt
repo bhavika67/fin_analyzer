@@ -1,0 +1,18 @@
+COMPANY PROFILE: TCS.NS
+
+longName: Tata Consultancy Services Limited
+sector: Technology
+industry: Information Technology Services
+marketCap: 7743430721536
+trailingPE: 15.747185
+forwardPE: 12.937124
+revenueGrowth: 0.096
+grossMargins: 0.40307
+operatingMargins: 0.25288
+returnOnEquity: 0.48395002
+debtToEquity: 10.389
+currentRatio: 2.228
+beta: 0.227
+52WeekChange: -0.3728088
+recommendationKey: buy
+targetMeanPrice: 2939.5813

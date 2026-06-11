@@ -1,0 +1,18 @@
+COMPANY PROFILE: AAPL
+
+longName: Apple Inc.
+sector: Technology
+industry: Consumer Electronics
+marketCap: 4282539048960
+trailingPE: 35.34303
+forwardPE: 30.394382
+revenueGrowth: 0.166
+grossMargins: 0.47862
+operatingMargins: 0.32275
+returnOnEquity: 1.4147099
+debtToEquity: 79.548
+currentRatio: 1.07
+beta: 1.086
+52WeekChange: 0.4585843
+recommendationKey: buy
+targetMeanPrice: 312.48373

@@ -1,0 +1,18 @@
+COMPANY PROFILE: TSLA
+
+longName: Tesla, Inc.
+sector: Consumer Cyclical
+industry: Auto Manufacturers
+marketCap: 1433146621952
+trailingPE: 343.77478
+forwardPE: 152.63905
+revenueGrowth: 0.158
+grossMargins: 0.19065
+operatingMargins: 0.04203
+returnOnEquity: 0.04901
+debtToEquity: 18.738
+currentRatio: 2.043
+beta: 1.798
+52WeekChange: 0.24308228
+recommendationKey: buy
+targetMeanPrice: 419.93658

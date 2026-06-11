@@ -1,0 +1,18 @@
+COMPANY PROFILE: MSFT
+
+longName: Microsoft Corporation
+sector: Technology
+industry: Software - Infrastructure
+marketCap: 2951762673664
+trailingPE: 23.63831
+forwardPE: 20.49086
+revenueGrowth: 0.183
+grossMargins: 0.68309
+operatingMargins: 0.46326
+returnOnEquity: 0.34013999
+debtToEquity: 30.271
+currentRatio: 1.283
+beta: 1.103
+52WeekChange: -0.1575793
+recommendationKey: strong_buy
+targetMeanPrice: 560.946

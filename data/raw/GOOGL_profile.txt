@@ -1,0 +1,18 @@
+COMPANY PROFILE: GOOGL
+
+longName: Alphabet Inc.
+sector: Communication Services
+industry: Internet Content & Information
+marketCap: 4346030850048
+trailingPE: 27.18383
+forwardPE: 24.63638
+revenueGrowth: 0.218
+grossMargins: 0.60368
+operatingMargins: 0.36121
+returnOnEquity: 0.38884997
+debtToEquity: 20.026
+currentRatio: 1.922
+beta: 1.237
+52WeekChange: 1.0731928
+recommendationKey: strong_buy
+targetMeanPrice: 431.75906
