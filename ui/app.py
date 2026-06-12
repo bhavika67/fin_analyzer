@@ -11,6 +11,10 @@ load_dotenv(ROOT / ".env", override=True)
 
 import gradio as gr
 import httpx
+from ui.charts import (
+    empty_chart, trend_chart, correlation_chart,
+    anomaly_chart, coefficient_chart, r2_gauge
+)
 
 API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
 TIMEOUT  = 120
@@ -54,9 +58,13 @@ def ask_question(question: str, history: list) -> tuple:
     return history, ""
 
 
-def run_eda(file, target_col: str) -> str:
+def run_eda(file, target_col: str):
+    """Returns: summary text, trend chart, correlation chart, anomaly chart."""
+    empty = empty_chart("Run analysis to see chart")
+
     if file is None:
-        return "No file selected."
+        return "No file selected.", empty, empty, empty
+
     path = Path(file)
     with open(path, "rb") as f:
         params = {}
@@ -69,34 +77,45 @@ def run_eda(file, target_col: str) -> str:
             timeout=TIMEOUT,
         )
     if resp.status_code != 200:
-        return f"Error {resp.status_code}: {resp.text}"
-    d     = resp.json()
-    lines = [f"## EDA Results — {path.name}",
-             f"**Shape:** {d['shape']['rows']} rows x {d['shape']['cols']} cols\n"]
-    lines.append("### Insights")
+        return f"Error {resp.status_code}: {resp.text}", empty, empty, empty
+
+    d = resp.json()
+
+    # ── Text summary ──────────────────────────────────────────
+    lines = [
+        f"## EDA Results — {path.name}",
+        f"**Shape:** {d['shape']['rows']} rows x {d['shape']['cols']} cols\n",
+        "### Insights",
+    ]
     for ins in d.get("insights", []):
         lines.append(f"- {ins}")
-    if d.get("anomalies"):
-        lines.append("\n### Anomalies Detected")
-        for a in d["anomalies"]:
-            lines.append(f"- {a['summary']}")
-    if d.get("correlations"):
-        lines.append("\n### Strong Correlations")
-        for pair, val in list(d["correlations"].items())[:6]:
-            lines.append(f"- {pair}: **{val:.3f}**")
-    if d.get("trends"):
-        lines.append("\n### Trends")
-        for col, t in list(d["trends"].items())[:3]:
-            lines.append(f"- **{col}**: {t['direction']} "
-                         f"(avg change: {t['avg_pct_change']}%)")
-    return "\n".join(lines)
+    if d.get("missing_values"):
+        lines.append("\n### Missing Values")
+        for col, info in d["missing_values"].items():
+            lines.append(f"- **{col}**: {info['count']} missing ({info['pct']}%)")
+    summary = "\n".join(lines)
+
+    # ── Build charts ──────────────────────────────────────────
+    t = trend_chart(d.get("trends", {}))
+    c = correlation_chart(d.get("correlations", {}))
+    a = anomaly_chart(d.get("anomalies", []))
+
+    print(f"Trend chart traces:  {len(t.data)}")
+    print(f"Corr chart traces:   {len(c.data)}")
+    print(f"Anomaly chart traces:{len(a.data)}")
+
+    return summary, t, c, a
 
 
-def run_regression(file, target_col: str) -> str:
+def run_regression(file, target_col: str):
+    """Returns: summary text, coefficient chart, R2 gauge."""
+    empty = empty_chart("Run regression to see chart")
+
     if file is None:
-        return "No file selected."
+        return "No file selected.", empty, empty
     if not target_col.strip():
-        return "Please enter a target column name."
+        return "Please enter a target column name.", empty, empty
+
     path = Path(file)
     with open(path, "rb") as f:
         resp = httpx.post(
@@ -106,8 +125,11 @@ def run_regression(file, target_col: str) -> str:
             timeout=TIMEOUT,
         )
     if resp.status_code != 200:
-        return f"Error {resp.status_code}: {resp.text}"
-    d     = resp.json()
+        return f"Error {resp.status_code}: {resp.text}", empty, empty
+
+    d = resp.json()
+
+    # ── Text summary ──────────────────────────────────────────
     lines = [
         f"## Regression Results — target: `{d['target']}`\n",
         f"| Metric | Value |",
@@ -116,13 +138,14 @@ def run_regression(file, target_col: str) -> str:
         f"| MAE    | {d['mae']} |",
         f"| RMSE   | {d['rmse']} |",
         f"\n**{d['interpretation']}**",
-        "\n### Feature Coefficients",
     ]
-    for feat, coef in sorted(d["coefficients"].items(),
-                             key=lambda x: abs(x[1]), reverse=True):
-        bar = "+" * min(int(abs(coef) * 5), 20)
-        lines.append(f"- `{feat}`: {coef:+.4f}  {bar}")
-    return "\n".join(lines)
+    summary = "\n".join(lines)
+
+    return (
+        summary,
+        coefficient_chart(d.get("coefficients", {})),
+        r2_gauge(d.get("r2", 0)),
+    )
 
 
 # ── UI Layout ─────────────────────────────────────────────────────────────────
@@ -136,6 +159,7 @@ with gr.Blocks(title="Financial Document Analyzer") as demo:
 
     with gr.Tabs():
 
+        # ── Ingest ────────────────────────────────────────────
         with gr.Tab("Ingest"):
             gr.Markdown("Upload a PDF, DOCX, CSV, or Excel file to add it to the knowledge base.")
             ingest_input  = gr.File(label="Select Document",
@@ -146,6 +170,7 @@ with gr.Blocks(title="Financial Document Analyzer") as demo:
                              inputs=ingest_input,
                              outputs=ingest_output)
 
+        # ── Ask ───────────────────────────────────────────────
         with gr.Tab("Ask"):
             gr.Markdown("Ask natural language questions about your ingested documents.")
             chatbot = gr.Chatbot(height=440, label="Chat")
@@ -162,8 +187,9 @@ with gr.Blocks(title="Financial Document Analyzer") as demo:
                            inputs=[q_input, chatbot],
                            outputs=[chatbot, q_input])
 
+        # ── EDA ───────────────────────────────────────────────
         with gr.Tab("EDA"):
-            gr.Markdown("Upload a CSV or Excel file for instant Exploratory Data Analysis.")
+            gr.Markdown("Upload a CSV or Excel file for Exploratory Data Analysis.")
             with gr.Row():
                 eda_file   = gr.File(label="Upload CSV / Excel",
                                      file_types=[".csv", ".xlsx"])
@@ -171,12 +197,19 @@ with gr.Blocks(title="Financial Document Analyzer") as demo:
                     placeholder="e.g. net_income (optional)",
                     label="Target column",
                 )
-            eda_btn    = gr.Button("Run EDA", variant="primary")
-            eda_output = gr.Markdown()
-            eda_btn.click(run_eda,
-                          inputs=[eda_file, eda_target],
-                          outputs=eda_output)
+            eda_btn    = gr.Button("Run Analysis", variant="primary")
+            eda_output = gr.Markdown(label="Summary")
+            with gr.Row():
+                trend_plot = gr.Plot(label="Trends",       min_width=300)
+                corr_plot  = gr.Plot(label="Correlations", min_width=300)
+            anom_plot  = gr.Plot(label="Anomalies Detected")
+            eda_btn.click(
+                fn=run_eda,
+                inputs=[eda_file, eda_target],
+                outputs=[eda_output, trend_plot, corr_plot, anom_plot],
+            )
 
+        # ── Regression ────────────────────────────────────────
         with gr.Tab("Regression"):
             gr.Markdown("Run linear regression on a numeric CSV dataset.")
             with gr.Row():
@@ -187,10 +220,15 @@ with gr.Blocks(title="Financial Document Analyzer") as demo:
                     label="Target column (required)",
                 )
             reg_btn    = gr.Button("Run Regression", variant="primary")
-            reg_output = gr.Markdown()
-            reg_btn.click(run_regression,
-                          inputs=[reg_file, reg_target],
-                          outputs=reg_output)
+            reg_output = gr.Markdown(label="Summary")
+            with gr.Row():
+                coef_plot  = gr.Plot(label="Feature Coefficients", min_width=300)
+                gauge_plot = gr.Plot(label="R2 Score",              min_width=300)
+            reg_btn.click(
+                fn=run_regression,
+                inputs=[reg_file, reg_target],
+                outputs=[reg_output, coef_plot, gauge_plot],
+            )
 
 
 if __name__ == "__main__":

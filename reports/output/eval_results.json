@@ -1,0 +1,76 @@
+{
+  "summary": {
+    "num_samples": 8,
+    "avg_faithfulness": 0.4792,
+    "avg_answer_relevancy": 0.5247,
+    "avg_context_precision": 0.625,
+    "overall_score": 0.543,
+    "quality": "Fair"
+  },
+  "details": [
+    {
+      "question": "What is Apple's net profit margin?",
+      "answer": "Apple's net profit margin is 26.60% as of March 31, 2026. \n\nSource: AAPL_financials.csv",
+      "ground_truth": "Apple's net profit margin is approximately 26.60%",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8789,
+      "context_precision": 1.0
+    },
+    {
+      "question": "What were the key risks mentioned in the annual report?",
+      "answer": "Please specify the company you are interested in, so I can retrieve the relevant information from the annual report.",
+      "ground_truth": "Key risks include macroeconomic slowdown affecting SMB segment and rising cloud costs",
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.0,
+      "context_precision": 0.5
+    },
+    {
+      "question": "What was the total revenue for FY 2023?",
+      "answer": "Please specify the company you are interested in for the total revenue of FY 2023.",
+      "ground_truth": "Total revenue for FY 2023 reached $2,847M",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.0,
+      "context_precision": 1.0
+    },
+    {
+      "question": "Which company had the highest net income?",
+      "answer": "Based on the latest available data, the company with the highest net income is Alphabet Inc. (GOOGL) with a net income of $62.578 billion for the quarter ending March 31, 2026. \n\nHere are the net incomes for each company:\n\n- **Alphabet Inc. (GOOGL):** $62.578 billion (Source: GOOGL_financials.csv)\n- **Apple Inc. (AAPL):** $29.578 billion (Source: AAPL_financials.csv)\n- **Microsoft Corporation (MSFT):** $31.778 billion (Source: MSFT_financials.csv)\n- **Tesla, Inc. (TSLA):** $0.477 billion (Source: TSLA_financials.csv)\n- **Infosys Limited (INFY):** $0.919 billion (Source: INFY.NS_financials.csv)\n- **Tata Consultancy Services Limited (TCS):** $137.180 billion (Source: TCS.NS_financials.csv)\n\nNote: The net income for TCS appears to be significantly higher, but this might be due to currency differences or reporting standards.",
+      "ground_truth": "Alphabet Inc. (GOOGL) had the highest net income",
+      "faithfulness": 0.4375,
+      "answer_relevancy": 0.8556,
+      "context_precision": 0.0
+    },
+    {
+      "question": "What is the revenue growth outlook for FY 2024?",
+      "answer": "The revenue growth outlook for FY 2024 for the companies in question is as follows:\n\n- **Apple Inc. (AAPL)**: Apple is projecting a revenue growth of 12-18% for FY 2024. This growth is expected to be driven by the launch of a new AI product line and expansion into the Asia-Pacific (APAC) markets. However, potential risks include a macroeconomic slowdown that could affect the small and medium-sized business (SMB) segment and rising cloud costs. [Source: AAPL_financials.csv]\n\n- **Microsoft (MSFT)**: Microsoft has demonstrated consistent revenue growth, supported by a strong gross margin of over 67% and a net margin reaching up to 47.32% in recent quarters, indicating robust profitability. [Source: MSFT_financials.csv]\n\n- **Tesla (TSLA)**: Tesla has experienced fluctuations in its net margin, which decreased from 5.2% in June 2025 to 2.13% in March 2026, although it has maintained a gross margin above 17%. This suggests some volatility in profitability, which could impact revenue growth. [Source: TSLA_financials.csv]\n\nUnfortunately, specific revenue growth projections for Google (GOOGL), Infosys (INFY), and Tata Consultancy Services (TCS) were not provided in the available summaries.",
+      "ground_truth": "Management guides revenue of $3,200M to $3,350M representing 12 to 18 percent growth",
+      "faithfulness": 0.0625,
+      "answer_relevancy": 0.0,
+      "context_precision": 1.0
+    },
+    {
+      "question": "What caused the Q3 2022 revenue dip?",
+      "answer": "The revenue dip in Q3 2022 was primarily caused by a supply chain disruption that delayed the closure of enterprise deals. Specifically, three major contracts worth $68 million were pushed into Q4 2022 due to this disruption. This was identified as a one-time event, and the revenue pipeline recovered fully by Q4 2022. \n\n[Source: ANNUAL FINANCIAL REPORT \u2013 FY 2023]",
+      "ground_truth": "A supply chain disruption delayed enterprise deal closures pushing three contracts worth $68M into Q4",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8812,
+      "context_precision": 0.5
+    },
+    {
+      "question": "What is TCS revenue compared to Infosys?",
+      "answer": "As of the most recent financial data:\n\n- **Tata Consultancy Services (TCS)** reported a revenue of approximately \u20b9706,980 crore (or \u20b97.0698 trillion) for the fiscal year ending March 31, 2026. [Source: TCS.NS_financials.csv]\n\n- **Infosys** reported a revenue of approximately $5.04 billion for the fiscal year ending March 31, 2026. [Source: INFY.NS_financials.csv]\n\nThese figures indicate that TCS's revenue is significantly higher than that of Infosys.",
+      "ground_truth": "TCS has higher revenue than Infosys for the same period",
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.6701,
+      "context_precision": 0.0
+    },
+    {
+      "question": "What is Microsoft's gross margin?",
+      "answer": "Microsoft's gross margin is approximately 68.31% as per the latest available data. [Source: MSFT_profile.txt]",
+      "ground_truth": "Microsoft's gross margin is approximately 69 to 70 percent",
+      "faithfulness": 0.3333,
+      "answer_relevancy": 0.9121,
+      "context_precision": 1.0
+    }
+  ]
+}
