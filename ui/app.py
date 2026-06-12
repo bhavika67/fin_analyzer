@@ -30,7 +30,7 @@ def ingest_file(file) -> str:
         )
     if resp.status_code == 200:
         d = resp.json()
-        return (f" **{d['filename']}** ingested successfully.\n"
+        return (f"**{d['filename']}** ingested successfully.\n"
                 f"- Chunks indexed: **{d['chunks_indexed']}**\n"
                 f"- Total vectors in store: **{d['total_vectors']}**")
     return f"Error {resp.status_code}: {resp.text}"
@@ -72,24 +72,20 @@ def run_eda(file, target_col: str) -> str:
         return f"Error {resp.status_code}: {resp.text}"
     d     = resp.json()
     lines = [f"## EDA Results — {path.name}",
-             f"**Shape:** {d['shape']['rows']} rows × {d['shape']['cols']} cols\n"]
-
-    lines.append("###  Insights")
+             f"**Shape:** {d['shape']['rows']} rows x {d['shape']['cols']} cols\n"]
+    lines.append("### Insights")
     for ins in d.get("insights", []):
         lines.append(f"- {ins}")
-
     if d.get("anomalies"):
-        lines.append("\n### Anomalies")
+        lines.append("\n### Anomalies Detected")
         for a in d["anomalies"]:
             lines.append(f"- {a['summary']}")
-
     if d.get("correlations"):
         lines.append("\n### Strong Correlations")
         for pair, val in list(d["correlations"].items())[:6]:
             lines.append(f"- {pair}: **{val:.3f}**")
-
     if d.get("trends"):
-        lines.append("\n###  Trends")
+        lines.append("\n### Trends")
         for col, t in list(d["trends"].items())[:3]:
             lines.append(f"- **{col}**: {t['direction']} "
                          f"(avg change: {t['avg_pct_change']}%)")
@@ -98,7 +94,7 @@ def run_eda(file, target_col: str) -> str:
 
 def run_regression(file, target_col: str) -> str:
     if file is None:
-        return " No file selected."
+        return "No file selected."
     if not target_col.strip():
         return "Please enter a target column name."
     path = Path(file)
@@ -116,7 +112,7 @@ def run_regression(file, target_col: str) -> str:
         f"## Regression Results — target: `{d['target']}`\n",
         f"| Metric | Value |",
         f"|--------|-------|",
-        f"| R²     | **{d['r2']}** |",
+        f"| R2     | **{d['r2']}** |",
         f"| MAE    | {d['mae']} |",
         f"| RMSE   | {d['rmse']} |",
         f"\n**{d['interpretation']}**",
@@ -124,17 +120,14 @@ def run_regression(file, target_col: str) -> str:
     ]
     for feat, coef in sorted(d["coefficients"].items(),
                              key=lambda x: abs(x[1]), reverse=True):
-        bar = "█" * min(int(abs(coef) * 5), 20)
+        bar = "+" * min(int(abs(coef) * 5), 20)
         lines.append(f"- `{feat}`: {coef:+.4f}  {bar}")
     return "\n".join(lines)
 
 
 # ── UI Layout ─────────────────────────────────────────────────────────────────
 
-with gr.Blocks(
-    title="Financial Document Analyzer",
-    theme=gr.themes.Soft(primary_hue="blue", neutral_hue="slate"),
-) as demo:
+with gr.Blocks(title="Financial Document Analyzer") as demo:
 
     gr.Markdown(
         "# Financial Document Analyzer\n"
@@ -143,7 +136,6 @@ with gr.Blocks(
 
     with gr.Tabs():
 
-        # ── Tab 1: Ingest ──────────────────────────────────────────────────
         with gr.Tab("Ingest"):
             gr.Markdown("Upload a PDF, DOCX, CSV, or Excel file to add it to the knowledge base.")
             ingest_input  = gr.File(label="Select Document",
@@ -154,16 +146,15 @@ with gr.Blocks(
                              inputs=ingest_input,
                              outputs=ingest_output)
 
-        # ── Tab 2: Ask ─────────────────────────────────────────────────────
         with gr.Tab("Ask"):
             gr.Markdown("Ask natural language questions about your ingested documents.")
-            chatbot   = gr.Chatbot(height=440, type="messages")
-            q_input   = gr.Textbox(
+            chatbot = gr.Chatbot(height=440, label="Chat")
+            q_input = gr.Textbox(
                 placeholder="e.g. Compare INFY and TCS net margins",
                 label="Your question",
                 lines=2,
             )
-            ask_btn   = gr.Button("Ask", variant="primary")
+            ask_btn = gr.Button("Ask", variant="primary")
             ask_btn.click(ask_question,
                           inputs=[q_input, chatbot],
                           outputs=[chatbot, q_input])
@@ -171,7 +162,6 @@ with gr.Blocks(
                            inputs=[q_input, chatbot],
                            outputs=[chatbot, q_input])
 
-        # ── Tab 3: EDA ─────────────────────────────────────────────────────
         with gr.Tab("EDA"):
             gr.Markdown("Upload a CSV or Excel file for instant Exploratory Data Analysis.")
             with gr.Row():
@@ -187,7 +177,6 @@ with gr.Blocks(
                           inputs=[eda_file, eda_target],
                           outputs=eda_output)
 
-        # ── Tab 4: Regression ──────────────────────────────────────────────
         with gr.Tab("Regression"):
             gr.Markdown("Run linear regression on a numeric CSV dataset.")
             with gr.Row():
@@ -208,5 +197,4 @@ if __name__ == "__main__":
     demo.launch(
         server_name="127.0.0.1",
         server_port=int(os.getenv("GRADIO_SERVER_PORT", 7860)),
-        show_api=False,
     )
