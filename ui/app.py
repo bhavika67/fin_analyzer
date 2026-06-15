@@ -1,5 +1,6 @@
 # ui/app.py
 import sys
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -51,10 +52,38 @@ def ask_question(question: str, history: list) -> tuple:
     if resp.status_code == 200:
         d      = resp.json()
         answer = d.get("answer") or f"Error: {d.get('error')}"
+        print("RAW ANSWER:", repr(answer))
     else:
         answer = f"API error {resp.status_code}: {resp.text}"
-    history.append({"role": "user",      "content": question})
-    history.append({"role": "assistant", "content": answer})
+
+    history.append({"role": "user", "content": question})
+
+    # ── Check if the answer contains a generated chart ─────────
+    chart_match = re.search(r"CHART_GENERATED:(.+?\.png)\|(.+)", answer)
+    if chart_match:
+        chart_path  = chart_match.group(1).strip()
+        chart_title = chart_match.group(2).strip().split("\n")[0]
+        chart_title = re.sub(r"[\)\]]+$", "", chart_title)  # strip trailing ) or ]
+
+        # Normalize path for Gradio
+        chart_path = str(Path(chart_path).resolve())
+
+        # Any text before the marker, with markdown image syntax stripped
+        before = answer[:chart_match.start()]
+        before = re.sub(r"!\[[^\]]*\]\($", "", before).strip()
+
+        if before:
+            history.append({"role": "assistant", "content": before})
+
+        if Path(chart_path).exists():
+            history.append({"role": "assistant", "content": {"path": chart_path}})
+            history.append({"role": "assistant", "content": chart_title})
+        else:
+            history.append({"role": "assistant",
+                            "content": f"Chart was generated but file not found at: {chart_path}"})
+    else:
+        history.append({"role": "assistant", "content": answer})
+
     return history, ""
 
 
@@ -99,10 +128,6 @@ def run_eda(file, target_col: str):
     t = trend_chart(d.get("trends", {}))
     c = correlation_chart(d.get("correlations", {}))
     a = anomaly_chart(d.get("anomalies", []))
-
-    print(f"Trend chart traces:  {len(t.data)}")
-    print(f"Corr chart traces:   {len(c.data)}")
-    print(f"Anomaly chart traces:{len(a.data)}")
 
     return summary, t, c, a
 
@@ -172,10 +197,13 @@ with gr.Blocks(title="Financial Document Analyzer") as demo:
 
         # ── Ask ───────────────────────────────────────────────
         with gr.Tab("Ask"):
-            gr.Markdown("Ask natural language questions about your ingested documents.")
-            chatbot = gr.Chatbot(height=440, label="Chat")
+            gr.Markdown(
+                "Ask natural language questions about your ingested documents. "
+                "You can also ask for charts, e.g. *'Show me a line chart of revenue from quarterly_pl'*."
+            )
+            chatbot = gr.Chatbot(height=480, label="Chat")
             q_input = gr.Textbox(
-                placeholder="e.g. Compare INFY and TCS net margins",
+                placeholder="e.g. Compare INFY and TCS net margins, or 'plot revenue trend from quarterly_pl'",
                 label="Your question",
                 lines=2,
             )

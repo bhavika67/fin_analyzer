@@ -25,11 +25,12 @@ def main():
     agent = FinancialAgent(store)
 
     questions = [
-        "What is Apple's net profit margin?",
-        "Compare INFY and TCS revenue",
-        "What were the key risks mentioned in the annual report?",
-        "Which company had the highest net income?",
-    ]
+    "What is the average net_profit across all quarters in quarterly_pl?",
+    "Which quarter had the highest revenue in quarterly_pl?",
+    "Compare AAPL and MSFT net income from their financials tables",
+    "What was the total revenue for FY 2023?",  # the one that failed RAGAS
+    "What were the key risks mentioned in the annual report?",
+]
 
     for q in questions:
         print("\n" + "="*60)
