@@ -1,0 +1,33 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [
+    ".git", ".github", "__pycache__", ".venv",
+    "data", "reports",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # FastAPI depends() in default args — false positive
+    "N806",  # uppercase variable names (common in ML/data code)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "config", "ingestion", "vectorstore", "agent",
+    "eda", "evaluation", "api", "ui",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
