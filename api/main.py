@@ -12,8 +12,15 @@ load_dotenv(ROOT / ".env", override=True)
 import tempfile
 import shutil
 import sqlite3
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Security, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
+from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
 from loguru import logger
 
@@ -24,17 +31,50 @@ from agent.agent import FinancialAgent, DB_PATH
 from eda import EDAAnalyzer, RegressionAnalyzer, AnomalyDetector
 
 # ── App setup ─────────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="Financial Document Analyzer",
     description="Ingest financial documents and ask questions via Agentic RAG.",
     version="1.0.0",
 )
+
+# ── 1. Rate limiting ───────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ── 2. CORS — only allow the Gradio UI origin ──────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "http://127.0.0.1:7860",
+        "http://localhost:7860",
+    ],
+    allow_methods=["GET", "POST"],
+    allow_headers=["X-API-Key", "Content-Type"],
 )
+
+# ── 3. Trusted host ────────────────────────────────────────────────────────────
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["127.0.0.1", "localhost"],
+)
+
+# ── 4. Upload size limit (50 MB) ───────────────────────────────────────────────
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
+class LimitUploadSize(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "POST":
+            content_length = request.headers.get("content-length")
+            if content_length and int(content_length) > MAX_UPLOAD_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "File too large. Maximum upload size is 50 MB."},
+                )
+        return await call_next(request)
+
+app.add_middleware(LimitUploadSize)
 
 # ── Singletons (loaded once at startup) ───────────────────────────────────────
 settings        = get_settings()
@@ -54,6 +94,18 @@ ALLOWED_TABLES = {
     "aapl_financials", "googl_financials", "msft_financials",
     "tsla_financials", "infy_financials", "tcs_financials",
 }
+
+# ── API key authentication ─────────────────────────────────────────────────────
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def verify_api_key(key: str = Security(_api_key_header)):
+    if not settings.api_secret_key:
+        return  # auth disabled if key not configured
+    if key != settings.api_secret_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API key. Pass it as X-API-Key header.",
+        )
 
 
 def _load_table(table_name: str):
@@ -133,7 +185,8 @@ def list_tables():
 
 
 @app.post("/ingest")
-async def ingest(file: UploadFile = File(...)):
+@limiter.limit("20/minute")
+async def ingest(request: Request, file: UploadFile = File(...), _=Security(verify_api_key)):
     """Upload and index a financial document."""
     suffix = Path(file.filename).suffix
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -153,16 +206,20 @@ async def ingest(file: UploadFile = File(...)):
 
 
 @app.post("/ask", response_model=QuestionResponse)
-def ask(request: QuestionRequest):
+@limiter.limit("10/minute")
+def ask(request: Request, body: QuestionRequest, _=Security(verify_api_key)):
     """Ask a natural language question about ingested documents."""
-    result = agent.ask(request.question)
+    result = agent.ask(body.question)
     return QuestionResponse(**result)
 
 
 @app.post("/eda")
-async def run_eda(file: UploadFile | None = File(None),
+@limiter.limit("20/minute")
+async def run_eda(request: Request,
+                   file: UploadFile | None = File(None),
                    table_name: str | None = None,
-                   target_column: str | None = None):
+                   target_column: str | None = None,
+                   _=Security(verify_api_key)):
     """Run EDA on an uploaded CSV/Excel file, or on a table from the
     financial database (pass table_name instead of a file)."""
     tmp_dir = None
@@ -191,9 +248,12 @@ async def run_eda(file: UploadFile | None = File(None),
 
 
 @app.post("/regression")
-async def run_regression(file: UploadFile | None = File(None),
+@limiter.limit("20/minute")
+async def run_regression(request: Request,
+                          file: UploadFile | None = File(None),
                           table_name: str | None = None,
-                          target_column: str = "revenue"):
+                          target_column: str = "revenue",
+                          _=Security(verify_api_key)):
     """Run linear regression on an uploaded CSV/Excel file, or on a table
     from the financial database (pass table_name instead of a file)."""
     tmp_dir = None
@@ -219,9 +279,12 @@ async def run_regression(file: UploadFile | None = File(None),
 
 
 @app.post("/analyze")
-async def analyze(file: UploadFile | None = File(None),
+@limiter.limit("10/minute")
+async def analyze(request: Request,
+                   file: UploadFile | None = File(None),
                    table_name: str | None = None,
-                   target_column: str | None = None):
+                   target_column: str | None = None,
+                   _=Security(verify_api_key)):
     """Full pipeline: ingest a CSV/Excel dataset into the knowledge base, then
     run EDA on it (and regression too, if target_column is given). Accepts
     either an uploaded file or a table_name from the financial database.

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///data/processed/fin.db"
     log_level: str = "INFO"
+    api_secret_key: str = ""
 
 
 @lru_cache

@@ -19,6 +19,8 @@ from ui.charts import (
 
 API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
 TIMEOUT  = 120
+API_KEY  = os.getenv("API_SECRET_KEY", "")
+HEADERS  = {"X-API-Key": API_KEY} if API_KEY else {}
 
 
 # ── API helpers ───────────────────────────────────────────────────────────────
@@ -31,6 +33,7 @@ def ingest_file(file) -> str:
         resp = httpx.post(
             f"{API_BASE}/ingest",
             files={"file": (path.name, f)},
+            headers=HEADERS,
             timeout=TIMEOUT,
         )
     if resp.status_code == 200:
@@ -47,6 +50,7 @@ def ask_question(question: str, history: list) -> tuple:
     resp = httpx.post(
         f"{API_BASE}/ask",
         json={"question": question},
+        headers=HEADERS,
         timeout=TIMEOUT,
     )
     if resp.status_code == 200:
@@ -104,11 +108,12 @@ def _call_analysis_endpoint(endpoint: str, source: str, file_path, table_name: s
     if source == "Database Table":
         return httpx.post(f"{API_BASE}/{endpoint}",
                            params={**params, "table_name": table_name},
+                           headers=HEADERS,
                            timeout=TIMEOUT)
     with open(file_path, "rb") as f:
         return httpx.post(f"{API_BASE}/{endpoint}",
                            files={"file": (Path(file_path).name, f)},
-                           params=params, timeout=TIMEOUT)
+                           params=params, headers=HEADERS, timeout=TIMEOUT)
 
 
 def run_analysis(source: str, file, table_name: str, target_col: str):
