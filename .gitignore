@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# FinAnalyzer
+data/
+ui/charts/
+reports/output/
+bandit-report.json
+coverage.xml
