@@ -1,0 +1,149 @@
+[tool.poetry]
+name = "fin-analyzer"
+version = "1.0.0"
+description = "Intelligent Financial Document Analyzer & Q&A Agent — Agentic RAG with LangGraph, FAISS, FastAPI, and Gradio"
+authors = ["Bhavika Sharma <bhavika@example.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/bhavika67/fin-analyzer"
+repository = "https://github.com/bhavika67/fin-analyzer"
+keywords = ["rag", "llm", "finance", "langchain", "faiss", "fastapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [
+    { include = "ingestion" },
+    { include = "vectorstore" },
+    { include = "agent" },
+    { include = "eda" },
+    { include = "evaluation" },
+    { include = "api" },
+    { include = "ui" },
+]
+
+# ── Python version ────────────────────────────────────────────────────────────
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+
+# Core API
+fastapi           = ">=0.111,<1.0"
+uvicorn           = { version = ">=0.29,<1.0", extras = ["standard"] }
+pydantic          = ">=2.7,<3.0"
+pydantic-settings = ">=2.3,<3.0"
+python-dotenv     = ">=1.0,<2.0"
+python-multipart  = ">=0.0.9,<1.0"
+slowapi           = ">=0.1.9,<1.0"
+
+# LLM / Agent
+langchain              = ">=0.2,<1.0"
+langchain-core         = ">=0.2,<1.0"
+langchain-openai       = ">=0.1,<1.0"
+langchain-community    = ">=0.2,<1.0"
+langchain-text-splitters = ">=0.2,<1.0"
+langgraph              = ">=0.1,<1.0"
+openai                 = ">=1.30,<2.0"
+tenacity               = ">=8.3,<10.0"
+
+# Vector store
+faiss-cpu = ">=1.8,<2.0"
+numpy     = ">=1.26,<3.0"
+
+# Document parsing
+pypdf        = ">=4.2,<5.0"
+python-docx  = ">=1.1,<2.0"
+openpyxl     = ">=3.1,<4.0"
+pandas       = ">=2.2,<3.0"
+
+# EDA / ML
+scipy        = ">=1.13,<2.0"
+scikit-learn = ">=1.5,<2.0"
+
+# UI
+gradio  = ">=4.36,<5.0"
+httpx   = ">=0.27,<1.0"
+plotly  = ">=5.22,<6.0"
+
+# Data fetching
+yfinance = ">=0.2,<1.0"
+
+# Logging
+loguru = ">=0.7,<1.0"
+
+# Evaluation
+ragas    = ">=0.1,<1.0"
+datasets = ">=2.20,<4.0"
+
+
+# ── Dev / test dependencies ───────────────────────────────────────────────────
+[tool.poetry.group.dev.dependencies]
+pytest       = ">=8.2,<9.0"
+pytest-cov   = ">=5.0,<7.0"
+ruff         = ">=0.4,<1.0"
+bandit       = { version = ">=1.7,<2.0", extras = ["toml"] }
+
+
+# ── Scripts (poetry run <name>) ───────────────────────────────────────────────
+[tool.poetry.scripts]
+finanalyzer-api   = "api.main:app"
+finanalyzer-ui    = "ui.app:demo"
+ingest-all        = "scripts.ingest_all:main"
+load-db           = "scripts.load_sql_db:main"
+generate-data     = "scripts.generate_sample_data:main"
+evaluate-rag      = "scripts.evaluate_rag:main"
+
+
+# ── Build system ──────────────────────────────────────────────────────────────
+[build-system]
+requires      = ["poetry-core>=1.8"]
+build-backend = "poetry.core.masonry.api"
+
+
+# ── Ruff (linter + formatter) ─────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length    = 100
+exclude = [".git", ".github", "__pycache__", ".venv", "data", "reports"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "N"]
+ignore = ["E501", "B008", "N806"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "config", "ingestion", "vectorstore", "agent",
+    "eda", "evaluation", "api", "ui",
+]
+
+[tool.ruff.format]
+quote-style  = "double"
+indent-style = "space"
+
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+python_files = ["test_*.py"]
+addopts      = "-v --tb=short --durations=10 -p no:warnings"
+markers      = [
+    "unit: fast unit tests with no external dependencies",
+    "integration: tests that require a running API or real embeddings",
+    "slow: tests that take more than 5 seconds",
+]
+
+
+# ── Coverage ──────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source  = ["."]
+omit    = ["tests/*", "scripts/*", "data/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

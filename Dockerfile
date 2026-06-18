@@ -3,14 +3,20 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-# System deps needed to compile some wheels (faiss, scipy)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+    build-essential curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --upgrade pip \
- && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+# Install Poetry
+ENV POETRY_VERSION=1.8.3
+ENV POETRY_HOME=/opt/poetry
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+ENV POETRY_NO_INTERACTION=1
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --only main --no-root
 
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
@@ -23,19 +29,16 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.title="FinAnalyzer" \
       org.opencontainers.image.description="Agentic RAG for financial documents"
 
-# Non-root user for security
 RUN useradd --create-home --shell /bin/bash app
 WORKDIR /app
 
-# Install wheels from builder stage (no compiler needed here)
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* \
- && rm -rf /wheels
+# Copy the virtualenv from builder
+COPY --from=builder /build/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application source
 COPY --chown=app:app . .
 
-# Create runtime directories
 RUN mkdir -p data/raw data/processed data/embeddings/faiss_index \
              ui/charts reports/output \
  && chown -R app:app data ui reports
@@ -44,9 +47,7 @@ USER app
 
 EXPOSE 8000 7860
 
-# Health check for the FastAPI service
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
   CMD python -c "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"
 
-# Default: start the API (override in docker-compose for the UI)
-CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
