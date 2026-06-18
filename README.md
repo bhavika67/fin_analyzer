@@ -1,5 +1,10 @@
 # FinAnalyzer — Intelligent Financial Document Analyzer & Q&A Agent
 
+![CI/CD](https://github.com/bhavika67/fin-analyzer/actions/workflows/ci.yml/badge.svg)
+![RAG Eval](https://github.com/bhavika67/fin-analyzer/actions/workflows/eval.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 An end-to-end **Agentic RAG system** for financial document intelligence. Ingests PDFs, DOCX, CSV, and Excel files — runs EDA, regression, and anomaly detection — and answers natural language questions using a LangGraph ReAct agent backed by a FAISS vector store and SQLite database.
 
 ---
@@ -40,7 +45,11 @@ ui/                ← Gradio dashboard (Ingest / Ask / EDA / Regression / Data)
 | **Anomaly Detection** | IQR and Z-score outlier detection |
 | **RAGAS Evaluation** | Faithfulness, answer relevancy, context precision scoring |
 | **FastAPI Backend** | REST API with `/ingest`, `/ask`, `/eda`, `/regression`, `/analyze` |
+| **API Security** | API key auth, rate limiting, CORS lockdown, upload size guard |
 | **Gradio UI** | 5-tab interactive dashboard with Plotly charts |
+| **CI/CD Pipeline** | GitHub Actions — lint → test (3.10–3.12) → security scan → Docker build → deploy |
+| **Containerized** | Multi-stage Dockerfile + Docker Compose with named volumes |
+| **Weekly Eval** | Automated RAGAS evaluation every Sunday via GitHub Actions |
 
 ---
 
@@ -51,6 +60,12 @@ ui/                ← Gradio dashboard (Ingest / Ask / EDA / Regression / Data)
 ```bash
 git clone https://github.com/bhavika67/fin-analyzer.git
 cd fin-analyzer
+
+# Install with locked dependencies (recommended)
+pip install pip-tools
+pip install -r requirements.lock
+
+# Or install directly from requirements.txt
 pip install -r requirements.txt
 ```
 
@@ -58,7 +73,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenAI API key
+# Edit .env and add your keys
 ```
 
 ```env
@@ -69,6 +84,10 @@ VECTOR_STORE=faiss
 FAISS_INDEX_PATH=data/embeddings/faiss_index
 DATABASE_URL=sqlite:///data/processed/fin.db
 LOG_LEVEL=INFO
+
+# API authentication — generate with:
+# python -c "import secrets; print(secrets.token_hex(32))"
+API_SECRET_KEY=your-secret-key-here
 ```
 
 ### 3. Generate sample data + fetch real stock data
@@ -119,6 +138,22 @@ Open **http://127.0.0.1:7860** in your browser.
 ```
 fin-analyzer/
 ├── config.py                    ← Pydantic settings (reads .env)
+├── requirements.txt             ← Direct dependencies
+├── requirements.lock            ← Pinned dependency versions (pip-compile)
+├── Dockerfile                   ← Multi-stage build, non-root user
+├── docker-compose.yml           ← api + ui + one-shot setup service
+├── ruff.toml                    ← Linter + formatter config
+├── pytest.ini                   ← Test config + markers
+├── .dockerignore                ← Keeps image lean
+├── .env.example                 ← Environment template (safe to commit)
+│
+├── .github/
+│   ├── CODEOWNERS               ← Auto-assign reviewers
+│   ├── dependabot.yml           ← Weekly dependency updates
+│   ├── pull_request_template.md ← PR checklist
+│   └── workflows/
+│       ├── ci.yml               ← lint → test → security → build → deploy
+│       └── eval.yml             ← Weekly RAGAS evaluation
 │
 ├── ingestion/
 │   ├── parser.py                ← PDF/DOCX/CSV/TXT parser
@@ -141,7 +176,7 @@ fin-analyzer/
 │   └── evaluator.py             ← RAGAS evaluation pipeline
 │
 ├── api/
-│   └── main.py                  ← FastAPI: /ingest /ask /eda /regression /analyze
+│   └── main.py                  ← FastAPI: auth + rate limiting + all routes
 │
 ├── ui/
 │   ├── app.py                   ← Gradio 5-tab dashboard
@@ -163,17 +198,12 @@ fin-analyzer/
 │   └── test_vectorstore.py      ← FAISS add/search/save/load tests (9 tests)
 │
 ├── data/
-│   ├── raw/                     ← Source files (CSVs, TXTs, PDFs)
-│   ├── processed/               ← SQLite database (fin.db)
-│   └── embeddings/              ← FAISS index files
+│   ├── raw/                     ← Source files (CSVs, TXTs, PDFs) — gitignored
+│   ├── processed/               ← SQLite database (fin.db) — gitignored
+│   └── embeddings/              ← FAISS index files — gitignored
 │
-├── reports/
-│   └── output/                  ← RAGAS eval results, generated PDFs
-│
-├── .env.example                 ← Environment template
-├── requirements.txt             ← Python dependencies
-├── Dockerfile                   ← Container definition
-└── docker-compose.yml           ← Multi-service orchestration
+└── reports/
+    └── output/                  ← RAGAS eval results — gitignored
 ```
 
 ---
@@ -198,16 +228,27 @@ tcs_financials     (period, revenue, gross_profit, operating_income, net_income,
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/health` | API status + vector count |
-| `POST` | `/ingest` | Upload and index a document |
-| `POST` | `/ask` | Natural language Q&A via agent |
-| `POST` | `/eda` | EDA on uploaded CSV/Excel |
-| `POST` | `/regression` | Linear regression on uploaded CSV |
-| `POST` | `/analyze` | Full pipeline: EDA + regression + ingest |
+All `POST` endpoints require the `X-API-Key` header. `GET` endpoints are public.
+
+| Method | Endpoint | Auth | Rate Limit | Description |
+|---|---|---|---|---|
+| `GET` | `/health` | ❌ | — | API status + vector count |
+| `GET` | `/tables` | ❌ | — | List loaded database tables |
+| `POST` | `/ingest` | ✅ | 20/min | Upload and index a document |
+| `POST` | `/ask` | ✅ | 10/min | Natural language Q&A via agent |
+| `POST` | `/eda` | ✅ | 20/min | EDA on uploaded CSV/Excel or table |
+| `POST` | `/regression` | ✅ | 20/min | Linear regression on data |
+| `POST` | `/analyze` | ✅ | 10/min | Full pipeline: ingest + EDA + regression |
 
 Interactive docs available at **http://127.0.0.1:8000/docs**
+
+**Example authenticated request:**
+```bash
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "X-API-Key: your-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the average net profit?"}'
+```
 
 ---
 
@@ -255,8 +296,15 @@ The improvement was achieved by routing numeric questions through the SQL tool r
 ## Running Tests
 
 ```bash
+# Run all tests
 python -m pytest tests/ -v
 # Expected: 29 passed
+
+# Run with coverage report
+python -m pytest tests/ -v --cov=. --cov-report=term-missing
+
+# Run only fast unit tests
+python -m pytest tests/ -v -m unit
 ```
 
 ---
@@ -265,16 +313,50 @@ python -m pytest tests/ -v
 
 ```bash
 cp .env.example .env
-# Add your OpenAI API key to .env
+# Add your OPENAI_API_KEY and API_SECRET_KEY to .env
 
+# First time only — generate sample data and ingest
+docker compose --profile setup up setup
+
+# Start the full stack
 docker compose up --build
-# UI → http://localhost:7860
+# UI  → http://localhost:7860
 # API → http://localhost:8000/docs
 ```
 
+Data is persisted in named Docker volumes (`faiss_data`, `db_data`, `raw_data`) so it survives container restarts.
+
 ---
 
-## Known Limitations
+## CI/CD Pipeline
+
+Every push to `main` or pull request triggers:
+
+```
+Lint (Ruff) → Tests (Py 3.10/3.11/3.12) → Security Scan (Bandit) → Docker Build → Deploy to Staging
+```
+
+| Job | Tool | What it checks |
+|---|---|---|
+| Lint | Ruff | Code style + import order |
+| Tests | Pytest + coverage | 29 unit tests across 3 Python versions |
+| Security | Bandit | Common security vulnerabilities |
+| Build | Docker Buildx | Image builds cleanly, pushed to GHCR |
+| Deploy | SSH | Auto-deploys to staging on `main` push |
+
+**Weekly:** A separate workflow runs RAGAS evaluation every Sunday and uploads results as a GitHub Actions artifact.
+
+**GitHub Secrets required:**
+
+| Secret | Used by |
+|---|---|
+| `OPENAI_API_KEY` | eval workflow |
+| `API_SECRET_KEY` | staging deploy |
+| `STAGING_HOST` / `STAGING_USER` / `STAGING_SSH_KEY` | deploy job |
+
+---
+
+
 
 - **No PDF table extraction** — scanned PDFs and tables inside PDFs need `pdfplumber`
 - **Fixed top-k retrieval** — always retrieves 4 chunks regardless of question complexity
@@ -298,10 +380,15 @@ docker compose up --build
 | EDA / ML | Pandas, NumPy, Scikit-learn, SciPy |
 | Evaluation | RAGAS |
 | API | FastAPI + Uvicorn |
+| API Security | API key auth, slowapi rate limiting, CORS, upload guard |
 | UI | Gradio 6 |
 | Visualization | Plotly, Matplotlib |
-| Testing | Pytest (29 tests) |
-| Containers | Docker, Docker Compose |
+| Testing | Pytest (29 tests) + coverage |
+| Linting | Ruff |
+| Security scanning | Bandit |
+| Containers | Docker (multi-stage), Docker Compose |
+| CI/CD | GitHub Actions |
+| Dependency locking | pip-tools (requirements.lock) |
 
 ---
 
