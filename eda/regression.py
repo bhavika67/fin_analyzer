@@ -26,7 +26,11 @@ class RegressionAnalyzer:
     def fit(self, df: pd.DataFrame, target_col: str) -> RegressionResult:
         numeric = df.select_dtypes(include=[np.number]).dropna()
         if target_col not in numeric.columns:
-            raise ValueError(f"Target '{target_col}' not found or not numeric.")
+            available = ", ".join(numeric.columns) or "(no numeric columns found)"
+            raise ValueError(
+                f"Target '{target_col}' not found or not numeric. "
+                f"Available numeric columns: {available}."
+            )
 
         features = [c for c in numeric.columns if c != target_col]
         if not features:
@@ -39,7 +43,8 @@ class RegressionAnalyzer:
         if len(X) < 10:
             raise ValueError(
                 f"Too few rows ({len(X)}) for regression — need at least 10. "
-                f"Try quarterly_pl.csv or AAPL_prices.csv instead."
+                f"Try a dataset with more historical periods, e.g. quarterly_pl, "
+                f"segment_revenue, or cost_headcount."
             )
 
         scaler   = StandardScaler()
