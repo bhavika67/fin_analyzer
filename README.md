@@ -5,6 +5,7 @@
 ![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+
 An end-to-end **Agentic RAG system** for financial document intelligence. Ingests PDFs, DOCX, CSV, and Excel files — runs EDA, regression, and anomaly detection — and answers natural language questions using a LangGraph ReAct agent backed by a FAISS vector store and SQLite database.
 
 ---
